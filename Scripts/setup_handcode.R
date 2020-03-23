@@ -15,18 +15,19 @@ relevant_tweets %>% slice(totaltweets[601:800]) %>% select(status_id,text) %>% w
 
 # Recombine coded tweets --------------------------------------------------
 # Once the sets are coded, reimport them for merging (don't want to keep text from the CSV due to encoding issues)
-coded1 <- read_csv("Data/raw1_coded.csv") %>% select(-text)
-coded2 <- read_csv("Data/raw2_coded.csv") %>% select(-text)
-coded3 <- read_csv("Data/raw3_coded.csv") %>% select(-text)
-coded4 <- read_csv("Data/raw4_coded.csv") %>% select(-text)
+coded <- bind_rows(read_csv("Data/raw1_handcoded.csv") %>% select(-text),
+          read_csv("Data/raw2_handcoded.csv") %>% select(-text),
+          read_csv("Data/raw3_handcoded.csv") %>% select(-text),
+          read_csv("Data/raw4_handcoded.csv") %>% select(-text))
 
 relevant_tweets_coded <- relevant_tweets %>% 
-  left_join(coded1,by="status_id") %>% 
-  left_join(coded2,by="status_id") %>% 
-  left_join(coded3,by="status_id") %>% 
-  left_join(coded4,by="status_id")
+  right_join(coded,by="status_id")
 
-# Hand-check the merge worked on a few rows -------------------------------
+# Hand check that the merge worked correctly and that codings seem to match up
+# Change variable name if we change the variable name for the codes
+with_seed(seed=30820383,relevant_tweets_coded %>% select(status_id,text,code) %>% sample_n(20))
+
+write_rds(relevant_tweets_coded,path="Data/tokenized_relevant_tweets_handcoded.rds")
 
 
 
