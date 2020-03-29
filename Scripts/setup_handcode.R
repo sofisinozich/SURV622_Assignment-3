@@ -15,10 +15,10 @@ relevant_tweets %>% slice(totaltweets[601:800]) %>% select(status_id,text) %>% w
 
 # Recombine coded tweets --------------------------------------------------
 # Once the sets are coded, reimport them for merging (don't want to keep text from the CSV due to encoding issues)
-coded <- bind_rows(read_csv("Data/raw1_handcoded.csv") %>% select(-text),
-          read_csv("Data/raw2_handcoded.csv") %>% select(-text),
-          read_csv("Data/raw3_handcoded.csv") %>% select(-text),
-          read_csv("Data/raw4_handcoded.csv") %>% select(-text))
+coded <- bind_rows(read_csv("Data/handcode_1.csv") %>% select(-text),
+          read_csv("Data/handcode_2.csv") %>% select(-text),
+          read_csv("Data/handcode_3.csv") %>% select(-text),
+          read_csv("Data/handcode_4.csv") %>% select(-text))
 
 relevant_tweets_coded <- relevant_tweets %>% 
   right_join(coded,by="status_id")
