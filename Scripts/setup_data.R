@@ -32,6 +32,12 @@ coded <- bind_rows(handcode1,
                   read_csv("Data/handcode_3.csv") %>% select(-text),
                   read_csv("Data/handcode_4.csv") %>% select(-text), .id = "coder") 
 
+coded %<>% select(status_id, code)
+
+# Save to an RDS file 
+  
+  saveRDS(coded, "Data/Combined_Handcoded_Tweets.RDS")
+
 # Create features and set up train/test sets ------------------------------
 library(tidytext)
 
