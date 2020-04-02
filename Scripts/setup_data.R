@@ -32,7 +32,7 @@ coded <- bind_rows(handcode1,
                   read_csv("Data/handcode_3.csv") %>% select(-text),
                   read_csv("Data/handcode_4.csv") %>% select(-text), .id = "coder") 
 
-coded %<>% select(status_id, code)
+coded %<>% select(status_id, code, coder)
 
 # Save to an RDS file 
   
