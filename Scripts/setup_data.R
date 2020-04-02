@@ -23,12 +23,12 @@ handcode1 <- read_csv("Data/handcode_1.csv") %>%
   select(-text, code = coded) %>% 
   mutate(status_id = selected_ids[1:200])
 
-handcode2 <- read_csv("Data/handcode_2.csv") %>% 
-  select(-text, code = coded) %>% 
+handcode2 <- read_csv("Data/handcode_2plus.csv") %>% 
+  select(-text, code = Sentiment) %>% 
   mutate(status_id = selected_ids[201:400])
 
 coded <- bind_rows(handcode1,
-                   # handcode2
+                   handcode2,
                   read_csv("Data/handcode_3.csv") %>% select(-text),
                   read_csv("Data/handcode_4.csv") %>% select(-text), .id = "coder") 
 
