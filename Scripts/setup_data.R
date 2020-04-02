@@ -18,25 +18,46 @@ totaltweets<-with_seed(seed=30820383,sample.int(dim(relevant_tweets)[1], size=80
 
 selected_ids <- relevant_tweets$status_id[totaltweets] %>% as.numeric
 
-# Some fixing because Rachael and I have messed up status IDs... :| 
-handcode1 <- read_csv("Data/handcode_1.csv") %>% 
-  select(-text, code = coded) %>% 
-  mutate(status_id = selected_ids[1:200])
+# Fix status_id values corrupted by Excel for coder 1 and coder 2
+# Fortunately, this can be done by matching the text of a tweet in the assignment file
+# to the text of a tweet in the handcoding files. 
+# There are duplicate matches (some tweets have identical text), but this works out ok
+# because dulicate text was always given the same code (good work us)
 
-handcode2 <- read_csv("Data/handcode_2plus.csv") %>% 
-  select(-text, code = Sentiment) %>% 
-  mutate(status_id = selected_ids[201:400])
+  raw_handcoding_assignments <- list.files("Data", "raw\\d\\.csv", full.names = TRUE) %>% 
+    sort %>%
+    map_dfr(read_csv, .id = 'coder', col_types = cols(.default = col_character()))
+  
+  handcodings <- list.files("Data", "handcode_\\d(plus|).csv", full.names = TRUE)  %>% 
+    sort %>%
+    map(read_csv, col_types = cols(.default = col_character())) %>%
+    map( ~ rename_all(.x, list(~ str_replace(., "^(Sentiment|coded)$", "code")))) %>%
+    bind_rows(.id = 'coder') %>%
+    select(status_id, text, code, coder) %>%
+    mutate(status_id = str_remove_all(status_id, "\\."))
+  
+  fixed_status_id_data <- list()
+  for (coder_index in c(1,2)) {
+    fixed_status_id_data[[paste0("coder_", coder_index)]] <- inner_join(
+      x = handcodings %>% filter(coder == coder_index),
+      y = raw_handcoding_assignments %>% filter(coder == coder_index) %>%
+        select(text, status_id_assignment = status_id),
+      by = "text") %>%
+      distinct(status_id_assignment, text, .keep_all = TRUE) %>%
+      mutate(status_id = status_id_assignment) %>%
+      select(-status_id_assignment)
+  }
+  
+  fixed_status_id_data <- reduce(fixed_status_id_data, bind_rows)
+  
+  handcodings %<>% filter(!coder %in% c(1,2)) %>%
+    bind_rows(fixed_status_id_data)
 
-coded <- bind_rows(handcode1,
-                   handcode2,
-                  read_csv("Data/handcode_3.csv") %>% select(-text),
-                  read_csv("Data/handcode_4.csv") %>% select(-text), .id = "coder") 
-
-coded %<>% select(status_id, code, coder)
+  handcodings %<>% select(status_id, code, coder)
 
 # Save to an RDS file 
   
-  saveRDS(coded, "Data/Combined_Handcoded_Tweets.RDS")
+  saveRDS(handcodings, "Data/Combined_Handcoded_Tweets.RDS")
 
 # Create features and set up train/test sets ------------------------------
 library(tidytext)
@@ -58,7 +79,8 @@ dim(tweet_features)
 # Because some of the hand-coded tweets are just URLs (or something to that effect) we have fewer in the set. 
 # Think that's alright.
 
-tweet_features %<>% left_join(coded,by="status_id")
+tweet_features %<>% left_join(handcodings %>% mutate(status_id = as.numeric(status_id)),
+                              by="status_id")
 
 test_set <- with_seed(seed=9983,tweet_features %>% sample_frac(.2))
 write_rds(test_set,"Data/test_set.rds")
