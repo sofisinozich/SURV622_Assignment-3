@@ -62,11 +62,32 @@ library(ranger)
     form = code ~ . -1 -coder -status_id,
     data = train_set,
     method = 'ranger',
-    metric = 'ROC',
+    metric = 'Accuracy',
     tuneGrid = rf_tuning_param_grid,
     trControl = tc_settings,
-    num.threads = 1
+    num.threads = 3
   )
+  
+  # Get performance metrics
+  
+  train_set_predictions <- data.frame(
+    actual = train_set$code,
+    predicted = caret::predict.train(trained_model, newdata = train_set)
+  )
+  
+  train_set_counts <- train_set_predictions %>%
+    count(actual, predicted)
+    
+  # Overall accuracy
+  train_set_accuracy <- divide_by(train_set_counts %>% filter(actual == predicted) %>% pull('n') %>% sum(),
+                                  train_set_counts %>% pull('n') %>% sum())
+  
+  # Sensitivities
+  train_set_counts %>%
+    group_by(actual) %>%
+    mutate(sensitivity = n/sum(n)) %>%
+    filter(actual == predicted) %>%
+    ungroup()
   
 # Get test set predictions
   test_set_predictions <- caret::predict.train(trained_model, newdata = test_set)
@@ -79,4 +100,12 @@ library(ranger)
     mutate(pct_of_actual = n/sum(n)) %>%
     filter(actual == predicted) %>%
     ungroup()
+  
+  # Overall accuracy
+  divide_by(test_counts %>% filter(actual == predicted) %>% pull('n') %>% sum(),
+            test_counts %>% pull('n') %>% sum())
+  
+  # Sensitivies
+  test_counts %>%
+    summarize(accuracy = mean(actual == predicted))
   
