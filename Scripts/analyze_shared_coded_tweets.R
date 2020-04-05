@@ -64,4 +64,19 @@ library(withr)
     lmtest::lrtest(mnom_logit_model)
     
   # Estimate standard reliability metrics
+    library(irr)
     
+    coded_tweet_matrix <- shared_coded_tweets %>%
+      mutate(coder = paste0("coder_", coder),
+             code = paste0("code_", code)) %>%
+      spread(key = "coder", value = "code") %>%
+      {m <- as.matrix(select(., -status_id))
+       rownames(m) <- .[['status_id']]
+       m}
+    
+    # Fleiss' Kappa
+     irr::kappam.fleiss(coded_tweet_matrix, exact = FALSE, detail = TRUE)
+     
+    # Light's Kappa
+     irr::kappam.light(coded_tweet_matrix)
+     
