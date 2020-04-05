@@ -95,17 +95,14 @@ library(ranger)
   test_counts <- data.frame(actual = test_set$code, predicted = test_set_predictions) %>%
     count(actual, predicted)
   
-  test_counts %>%
-    group_by(actual) %>%
-    mutate(pct_of_actual = n/sum(n)) %>%
-    filter(actual == predicted) %>%
-    ungroup()
-  
   # Overall accuracy
-  divide_by(test_counts %>% filter(actual == predicted) %>% pull('n') %>% sum(),
-            test_counts %>% pull('n') %>% sum())
+  test_set_accuracy <- divide_by(test_counts %>% filter(actual == predicted) %>% pull('n') %>% sum(),
+                                 test_counts %>% pull('n') %>% sum())
   
-  # Sensitivies
-  test_counts %>%
-    summarize(accuracy = mean(actual == predicted))
-  
+  # Sensitivities
+    test_counts %>%
+      group_by(actual) %>%
+      mutate(pct_of_actual = n/sum(n)) %>%
+      filter(actual == predicted) %>%
+      ungroup()
+    
