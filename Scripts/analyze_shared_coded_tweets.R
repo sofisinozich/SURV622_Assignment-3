@@ -44,14 +44,22 @@ library(withr)
     bind_rows(recodings)
     
 # 04 - Basic counts ----
-    shared_coded_tweets %>%
-      mutate(coder = paste0("coder_", coder)) %>%
-      spread(key = "coder", value = "code")
+    overall_counts <- shared_coded_tweets %>%
+      mutate(coder = paste0("coder_", coder),
+             code = paste0("code_", code)) %>%
+      spread(key = "coder", value = "code") %>%
+      select(-status_id) %>%
+      apply(MARGIN = 2, table)
+    
+    prop.table(overall_counts, margin = 2)
     
   shared_coded_tweets %>%
       filter(!is.na(code))
   
 # 05 - Inferential stats ----
+  
+  # Chi-squared test for independence of coders and codes
+    chisq.test(overall_counts)
   
   # Fit a multinomial logistic regression
   # and use a likelihood ratio test
@@ -76,6 +84,20 @@ library(withr)
     
     # Fleiss' Kappa
      irr::kappam.fleiss(coded_tweet_matrix, exact = FALSE, detail = TRUE)
+     
+     bootstrap_values <- vector('numeric', length = 5000)
+     for (bootstrap_sample_index in seq_along(bootstrap_values)) {
+       
+       sampled_rows <- sample(x = seq_len(nrow(coded_tweet_matrix)), size = nrow(coded_tweet_matrix),
+                              replace = TRUE)
+       bootstrap_sample_matrix <- coded_tweet_matrix[sampled_rows,]
+       
+       stats <- irr::kappam.fleiss(bootstrap_sample_matrix, exact = FALSE, detail = FALSE)
+       
+       bootstrap_values[bootstrap_sample_index] <- stats$value
+     }
+     
+     quantile(bootstrap_values, probs = c(0.025, 0.975))
      
     # Light's Kappa
      irr::kappam.light(coded_tweet_matrix)
