@@ -56,6 +56,24 @@ library(withr)
   shared_coded_tweets %>%
       filter(!is.na(code))
   
+  # Pairwise agreement probabilities
+    coded_tweet_matrix <- shared_coded_tweets %>%
+      mutate(coder = paste0("coder_", coder),
+             code = paste0("code_", code)) %>%
+      spread(key = "coder", value = "code") %>%
+      {m <- as.matrix(select(., -status_id))
+      rownames(m) <- .[['status_id']]
+      m}
+  
+    pairwise_agreement_probs <- combn(paste0("coder_", 1:4), 2) %>%
+      apply(MARGIN = 2,
+            FUN = function(coder_names) {
+              mean( coded_tweet_matrix[,coder_names[1]] == coded_tweet_matrix[,coder_names[2]] )
+            })
+    
+      average_pairwise_agreement_prob <- mean(pairwise_agreement_probs)
+  
+  
 # 05 - Inferential stats ----
   
   # Chi-squared test for independence of coders and codes
