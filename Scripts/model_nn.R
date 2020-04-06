@@ -1,6 +1,7 @@
 ### Neural networks
-
+library(tidyverse)
 library(caret)
+library(magrittr)
 
 trainset <- read_rds("Data/train_set.rds")
 
@@ -114,10 +115,20 @@ test_set_predictions <-
             predict.train(model_nn_pca,newdata=test_set, type ="prob")) %>% 
   mutate(correct=actual==predicted)
 
-test_set_predictions %>% group_by(actual,correct) %>% count()
-test_set_predictions %>% count(correct)
+outcomes <- test_set_predictions %>% group_by(actual,correct) %>% count() %>% 
+  group_by(actual) %>% mutate(percent=n/sum(n))
 
-divide_by(test_set_predictions %>% group_by(actual,predicted) %>% count() %>% filter(actual == predicted) %>% pull('n') %>% sum(),
-          test_set_predictions %>% group_by(actual,predicted) %>% count() %>% pull('n') %>% sum())
+outcomes2 <- test_set_predictions %>% group_by(predicted,actual) %>% count()
 
-# 56% accuracy in the end
+# Set up a little table to keep everything
+metrics <- tibble(accuracy = 0,
+                  precision_pos = 0, precision_neu = 0, precision_neg = 0, precision_irr = 0,
+                  recall_pos = 0, recall_neu = 0, recall_neg = 0, recall_irr = 0)
+
+metrics$accuracy<-
+  outcomes %>% group_by(correct) %>% summarize(n=sum(n)) %>% mutate(percent=n/sum(n)) %>% extract(2,3) %>% pull
+
+metrics[1,2:5]<-
+  outcomes2 %>% mutate(correct = predicted==actual) %>% group_by(predicted) %>% mutate(percent = n/sum(n)) %>% filter(correct == TRUE) %>% select(percent) %>% t %>% extract(2,1:4) %>% as.numeric
+
+metrics[1,6:9] <- outcomes2 %>% group_by(actual) %>% mutate(percent = n/sum(n)) %>% filter(predicted==actual) %>% select(percent) %>% t %>% extract(2,1:4) %>% as.numeric()
