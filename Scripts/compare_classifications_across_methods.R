@@ -17,13 +17,17 @@ source("Scripts/load_dataviz_themes.R")
   ##_ Load the final trained model with its train and test sets
     load("Analysis Outputs/Trained Sentiment Classification Model.RData")
     
+  ##_ Load the logistic regression model
+    read_rds("Analysis Outputs/Logistic Regression Model.rds")
+    
   
 # Obtain all of the sentiment classifications for the test set from model evaluation -----
     
   test_set_classifications <- test_set %>%
     # Get the predictions from the model
-    add_column('model_classification' = predict(trained_model, newdata = test_set)) %>%
-    select(status_id, human_code = code, model_classification) %>%
+    add_column('rf_classification' = predict(trained_model, newdata = test_set)) %>%
+    add_column('logistic_classification' = predict(logreg1, newdata = test_set)) %>% 
+    select(status_id, human_code = code, rf_classification, logistic_classification) %>%
     # Add the sentiment from the dictionary method
     left_join(y = tokenized_tweets_with_sentiment %>%
                 select(status_id, SentimentGI) %>%
@@ -37,13 +41,14 @@ source("Scripts/load_dataviz_themes.R")
     
     overall_accuracy <- test_set_classifications %>%
       summarize(
-        model_accuracy = mean(human_code == model_classification),
+        rf_accuracy = mean(human_code == rf_classification),
+        logistic_accuracy = mean(human_code == logistic_classification),
         dictionary_accuracy = mean(human_code == SentimentGI)
       )
     
     category_recall_rates <- test_set_classifications %>%
       gather(key = 'classifier', value = 'classification',
-             one_of(c("model_classification", "SentimentGI"))) %>%
+             one_of(c("rf_classification","logistic_classification","SentimentGI"))) %>%
       group_by(classifier, human_code) %>%
       summarize(
         recall = mean(human_code == classification)
@@ -52,7 +57,7 @@ source("Scripts/load_dataviz_themes.R")
     
     category_precision_rates <- test_set_classifications %>%
       gather(key = 'classifier', value = 'classification',
-             one_of(c("model_classification", "SentimentGI"))) %>%
+             one_of(c("rf_classification","logistic_classification","SentimentGI"))) %>%
       group_by(classifier, classification) %>%
       summarize(
         precision = mean(human_code == classification)
@@ -65,7 +70,8 @@ source("Scripts/load_dataviz_themes.R")
                   rename(category = human_code),
                 by = c("classifier", "category")) %>%
       mutate(classifier = case_when(
-        str_detect(classifier, "model") ~ "Random Forest Classifier",
+        str_detect(classifier, "rf") ~ "Random Forest Classifier",
+        str_detect(classifier, "logistic") ~ "Logistic Classifier",
         str_detect(classifier, "SentimentGI") ~ "Dictionary-based Method"
       )) %>%
       gather(key = "metric", value = "value",
@@ -78,15 +84,16 @@ source("Scripts/load_dataviz_themes.R")
       geom_text(aes(label = scales::percent(value)), position = position_dodge(width = 0.8), hjust = -0.25) +
       scale_y_continuous(name = NULL, limits = c(0,1), breaks = seq(0,1,0.2), labels = scales::percent) +
       scale_x_discrete(name = "Sentiment Category") +
-      scale_fill_manual(name = "Sentiment Classifier:", values = c("Random Forest Classifier" = "#000033",
+      scale_fill_manual(name = "Sentiment Classifier:", values = c("Random Forest Classifier" = "#000033", 
+                                                                   "Logistic Classifier" = "#104F55",
                                    "Dictionary-based Method" = "#FF9933")) +
       labs(
         subtitle = glue::glue("Precision and recall of the two classification methods on the test set of {nrow(test_set)} hand-classified tweets not used for training models."),
-        title = paste("The random forest model outperforms the dictionary-based method in terms of precision",
-                      "and in terms of recall for 'neutral' tweets. However, recall for 'negative' tweets is comparatively poor.",
+        title = paste("Both ML methods outperform the dictionary-based method in terms of precision and in terms of recall",
+                      "for 'neutral' tweets. However, logistic is better for recall of 'negative' tweets and identifying 'irrelevant' tweets.",
                       sep = "\n")
       )
     
-    ggsave(filename = "Graphics/Precision-Recall by Category - Dictionary vs Random Forest.png",
+    ggsave(filename = "Graphics/Precision-Recall by Category - Dictionary vs Random Forest vs Logistic.png",
            dpi = 550, units = 'in', width = 6.25, height = 3, scale = 1.5)
     
