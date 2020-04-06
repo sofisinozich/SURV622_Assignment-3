@@ -55,7 +55,7 @@ library(ranger)
     mtry = seq(from = pmax(default_mtry - 5, 1),
                to = pmin(default_mtry + 5, nvars),
                by = 1),
-    splitrule = c("gini"),
+    splitrule = c("gini", "extratrees"),
     min.node.size = seq(10, 30, by = 5)
   )
 
@@ -113,3 +113,11 @@ library(ranger)
       filter(actual == predicted) %>%
       ungroup()
     
+# Save the model and underlying data to a single file ----
+    
+  save(
+    trained_model,
+    train_set,
+    test_set,
+    file = "Analysis Outputs/Trained Sentiment Classification Model.RData"
+  )
